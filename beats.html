@@ -1,0 +1,68 @@
+<!DOCTYPE html>
+<html><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>MAULT BEATS - Hip Hop Beat Maker</title>
+<style>
+*{box-sizing:border-box;font-family:Arial}body{background:#111;color:#fff;margin:0;padding:12px;text-align:center}
+h1{margin:5px}h1 span{color:#ffcc00}.top{display:flex;gap:8px;justify-content:center;flex-wrap:wrap;margin:10px}
+button{border:0;border-radius:12px;padding:14px 18px;font-weight:bold;cursor:pointer}
+.play{background:#ffcc00;font-size:18px}.stop{background:#c00;color:#fff}.clear{background:#333;color:#fff}
+input[type=range]{width:180px}label{font-size:13px;color:#aaa}
+.pads{display:grid;grid-template-columns:1fr 1fr 1fr 1fr;gap:10px;max-width:500px;margin:15px auto}
+.pad{aspect-ratio:1;border-radius:16px;font-size:14px;color:#fff}
+.pad:active{transform:scale(.92)}
+.kick{background:#e63946}.snare{background:#f4a261}.hat{background:#2a9d8f}.openhat{background:#457b9d}
+.bass808{background:#8338ec}.clap{background:#ff006e}.perc{background:#ffbe0b;color:#111}.vocal{background:#06d6a0;color:#111}
+.seq{max-width:500px;margin:auto;text-align:left}
+.row{display:flex;align-items:center;gap:5px;margin:6px 0}.row b{width:55px;font-size:12px}
+.step{width:28px;height:28px;border-radius:6px;background:#333;border:0;flex:1}.step.on{background:#ffcc00}.step.on2{background:#ff006e}
+select, input[type=text]{padding:10px;border-radius:10px;border:0;width:180px}
+</style></head>
+<body>
+<h1>MAULT <span>BEATS 🎤</span></h1><p>Hip Hop Beat Maker • Make beats on your phone</p>
+<div class="top">
+<button class="play" onclick="togglePlay()">▶ PLAY / ⏸ PAUSE</button>
+<button class="stop" onclick="stopAll()">⏹ STOP</button>
+<button class="clear" onclick="clearAll()">Clear</button>
+</div>
+<div class="top"><label>BPM: <span id="bpmVal">90</span></label><input type="range" min="60" max="160" value="90" oninput="setBPM(this.value)"></div>
+<div class="top"><label>Preset:</label><select onchange="loadPreset(this.value)">
+<option value="trap">Trap - 140 BPM</option><option value="boom">Boom Bap - 90 BPM</option><option value="drill">Drill - 130 BPM</option><option value="afro">Amapiano Hip Hop - 112 BPM</option>
+</select></div>
+
+<h3>🥁 TAP PADS - Play Live</h3>
+<div class="pads">
+<button class="pad kick" onclick="playSound('kick')">KICK<br>🥁</button>
+<button class="pad snare" onclick="playSound('snare')">SNARE<br>💥</button>
+<button class="pad hat" onclick="playSound('hat')">HI-HAT<br>🎩</button>
+<button class="pad openhat" onclick="playSound('openhat')">OPEN HAT</button>
+<button class="pad bass808" onclick="playSound('bass')">808 BASS<br>🔊</button>
+<button class="pad clap" onclick="playSound('clap')">CLAP<br>👏</button>
+<button class="pad perc" onclick="playSound('perc')">PERC<br>✨</button>
+<button class="pad vocal" onclick="playSound('vocal')">HEY! / ADLIB<br>🎤</button>
+</div>
+
+<h3>🎛️ STEP SEQUENCER - Tap squares to make a loop</h3>
+<div class="seq" id="seq"></div>
+<p style="color:#aaa;font-size:13px">Yellow = Kick • Pink = Snare/Hat • Tap squares, press PLAY, it loops forever</p>
+<p><button style="background:#25D366;color:#fff" onclick="shareBeat()">Share My Beat on WhatsApp →</button></p>
+
+<script>
+let ctx, bpm=90, playing=false, step=0, timer=null;
+let sounds={kick:null,snare:null,hat:null,openhat:null,bass:null,clap:null,perc:null,vocal:null};
+function ac(){ if(!ctx) ctx=new (window.AudioContext||window.webkitAudioContext)(); if(ctx.state==='suspended') ctx.resume(); return ctx; }
+function tone(freq,dur,type='sine',vol=0.5,slide=0){ let c=ac(),o=c.createOscillator(),g=c.createGain(); o.type=type; o.frequency.setValueAtTime(freq,c.currentTime); if(slide) o.frequency.exponentialRampToValueAtTime(slide,c.currentTime+dur); g.gain.setValueAtTime(vol,c.currentTime); g.gain.exponentialRampToValueAtTime(0.01,c.currentTime+dur); o.connect(g).connect(c.destination); o.start(); o.stop(c.currentTime+dur); }
+function noise(dur,vol=0.3,filterFreq=1000){ let c=ac(),len=c.sampleRate*dur,buf=c.createBuffer(1,len,c.sampleRate),d=buf.getChannelData(0); for(let i=0;i<len;i++) d[i]=Math.random()*2-1; let src=c.createBufferSource(); src.buffer=buf; let f=c.createBiquadFilter(); f.type='highpass'; f.frequency.value=filterFreq; let g=c.createGain(); g.gain.value=vol; src.connect(f).connect(g).connect(c.destination); src.start(); }
+function playSound(n){ ac(); if(n==='kick') tone(150,0.25,'sine',0.9,40); if(n==='snare') {noise(0.15,0.4,1500); tone(200,0.1,'triangle',0.3);} if(n==='hat') noise(0.05,0.2,6000); if(n==='openhat') noise(0.25,0.2,5000); if(n==='bass') tone(60,0.4,'sine',0.8,30); if(n==='clap') {noise(0.12,0.4,1000); noise(0.12,0.3,1000);} if(n==='perc') tone(800,0.08,'square',0.2,300); if(n==='vocal') tone(600,0.12,'sawtooth',0.2,900); }
+// Sequencer
+let tracks=[{name:'KICK',sound:'kick',steps:[1,0,0,0,1,0,0,0,1,0,0,0,1,0,0,0]},{name:'SNARE',sound:'snare',steps:[0,0,0,0,1,0,0,0,0,0,0,0,1,0,0,0]},{name:'HI-HAT',sound:'hat',steps:[1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1]},{name:'808',sound:'bass',steps:[1,0,0,0,0,0,1,0,0,0,1,0,0,0,0,0]}];
+function render(){ let h=''; tracks.forEach((t,ti)=>{ h+=`<div class="row"><b>${t.name}</b>`; t.steps.forEach((s,si)=>{ h+=`<button class="step ${s?'on':''} ${step===si?'on2':''}" onclick="toggleStep(${ti},${si})"></button>`; }); h+='</div>'; }); document.getElementById('seq').innerHTML=h; }
+function toggleStep(ti,si){ tracks[ti].steps[si]=tracks[ti].steps[si]?0:1; render(); }
+function tick(){ tracks.forEach(t=>{ if(t.steps[step]) playSound(t.sound); }); step=(step+1)%16; render(); }
+function togglePlay(){ if(playing){ clearInterval(timer); playing=false; } else { ac(); playing=true; step=0; timer=setInterval(tick, (60/bpm/4)*1000); } }
+function stopAll(){ clearInterval(timer); playing=false; step=0; render(); }
+function clearAll(){ tracks.forEach(t=>t.steps=t.steps.map(()=>0)); render(); }
+function setBPM(v){ bpm=Number(v); document.getElementById('bpmVal').innerText=v; if(playing){ clearInterval(timer); timer=setInterval(tick,(60/bpm/4)*1000); } }
+function loadPreset(p){ if(p==='trap'){ bpm=140; tracks[0].steps=[1,0,0,0,0,0,0,1,0,0,1,0,0,0,0,0]; tracks[1].steps=[0,0,0,0,1,0,0,0,0,0,0,0,1,0,0,0]; tracks[2].steps=[1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1]; tracks[3].steps=[1,0,0,1,0,0,0,0,1,0,0,0,0,0,1,0]; } if(p==='boom'){ bpm=90; tracks[0].steps=[1,0,0,0,0,0,1,0,0,0,1,0,0,0,0,0]; tracks[1].steps=[0,0,0,0,1,0,0,0,0,0,0,0,1,0,0,0]; tracks[2].steps=[1,0,1,0,1,0,1,0,1,0,1,0,1,0,1,0]; tracks[3].steps=[1,0,0,0,0,0,0,0,1,0,0,0,0,0,0,0]; } if(p==='drill'){ bpm=130; tracks[0].steps=[1,0,0,1,0,0,1,0,0,1,0,0,1,0,0,0]; tracks[1].steps=[0,0,0,0,1,0,0,0,0,0,0,0,1,0,0,1]; tracks[2].steps=[1,1,0,1,1,1,0,1,1,1,0,1,1,1,1,0]; tracks[3].steps=[1,0,0,0,1,0,0,1,0,0,1,0,0,0,0,0]; } if(p==='afro'){ bpm=112; tracks[0].steps=[1,0,0,0,1,0,0,0,1,0,0,0,1,0,0,1]; tracks[1].steps=[0,0,0,0,1,0,0,0,0,0,0,0,1,0,0,0]; tracks[2].steps=[1,1,1,0,1,1,1,0,1,1,1,0,1,1,1,0]; tracks[3].steps=[1,0,0,1,0,0,1,0,0,0,1,0,0,1,0,0]; } document.getElementById('bpmVal').innerText=bpm; document.querySelector('input[type=range]').value=bpm; if(playing){ clearInterval(timer); timer=setInterval(tick,(60/bpm/4)*1000); } render(); }
+function shareBeat(){ window.open("https://wa.me/27685182321?text="+encodeURIComponent("Yo! Check my beat I made on MAULT BEATS 🔥 BPM: "+bpm)); }
+render();
+</script></body></html>
